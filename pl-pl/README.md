@@ -253,3 +253,8 @@ Więcej informacji na temat uprzywilejowanych kontenerów możesz znaleźć [tut
 * [`docker exec`](https://docs.docker.com/engine/reference/commandline/exec) żeby wywołać komendę w kontenerze.
 
 Żeby wejść do działającego kontenera, dołącz nowy proces powłoki do działającego kontenera nazwanego foo, użyj: `docker exec -it foo /bin/bash`
+
+## Layers
+
+Wersjonowany system plików w Dockerze opiera się na warstwach. Warstwy są jak [commity w git'cie albo jak changesety dla systemów plików](https://docs.docker.com/engine/userguide/storagedriver/imagesandcontainers/).
+
