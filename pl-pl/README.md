@@ -254,6 +254,62 @@ Więcej informacji na temat uprzywilejowanych kontenerów możesz znaleźć [tut
 
 Żeby wejść do działającego kontenera, dołącz nowy proces powłoki do działającego kontenera nazwanego foo, użyj: `docker exec -it foo /bin/bash`
 
+## Images
+
+Obrazy są po prostu [szablonami dla kontenerów](https://docs.docker.com/engine/understanding-docker/#how-does-a-docker-image-work).
+
+### Cykl życia
+
+* [`docker images`](https://docs.docker.com/engine/reference/commandline/images) pokazuje wszystkie obrazy.
+* [`docker import`](https://docs.docker.com/engine/reference/commandline/import) tworzy obraz z pliku `.tar`.
+* [`docker build`](https://docs.docker.com/engine/reference/commandline/build) tworzy obraz z Dockerfile.
+* [`docker commit`](https://docs.docker.com/engine/reference/commandline/commit) tworzy obraz z kontenera, pauzując go chwilowo, jeśli działa.
+* [`docker rmi`](https://docs.docker.com/engine/reference/commandline/rmi) usuwa obraz.
+* [`docker load`](https://docs.docker.com/engine/reference/commandline/load) ładuje obraz z archiwum typu `.tar` jako STDIN, zarówno obrazy, jak i tagi.
+* [`docker save`](https://docs.docker.com/engine/reference/commandline/save) zapisuje obraz jako archiwum typu `.tar`, jako potok STDOUT ze wszystkimi warstwami, tagami i wersjami.
+
+### Informacje
+
+* [`docker history`](https://docs.docker.com/engine/reference/commandline/history) pokazuje historię obrazu.
+* [`docker tag`](https://docs.docker.com/engine/reference/commandline/tag) przypisuje nazwę do obrazu (lokalnego lub w rejestrze).
+
+### Czyszczenie
+
+Możesz używać komendy `docker rmi` do usunięcia specyficznego obrazu, ale jest narzędzie [docker-gc](https://github.com/spotify/docker-gc), które bezpicznie oczyści obrazy, które nie są używane przez żaden z kontenerów. Dodane w dockerze 1.13 `docker image prune` również umożliwia usuwanie nieużywanych obrazów. Zobacz [Prune](#prune).
+
+### Załaduj/Zapisz obraz
+
+Załaduj obraz z pliku:
+
+```sh
+docker load < my_image.tar.gz
+```
+
+Zapisz istniejący obraz:
+
+```sh
+docker save my_image:my_tag | gzip > my_image.tar.gz
+```
+
+### Importuj/Eksportuj kontener
+
+Importuj kontener jako obraz z pliku:
+
+```sh
+cat my_container.tar.gz | docker import - my_image:my_tag
+```
+
+Eksportuj istniejący kontener:
+
+```sh
+docker export my_container | gzip > my_container.tar.gz
+```
+
+### Różnica między ładowaniem zapisanego obrazu a importowaniem i eksportowaniem kontenera jako obraz
+
+Ładowanie obrazu używając komendy `load` tworzy nowy obraz wraz z jego historią.
+Importowanie kontenera jako obraz używając komendy `import` tworzy nowy obraz bez historii, co skutkuje mniejszym rozmiarem obrazu w porównaniu do załadowania obrazu.
+
 ## Layers
 
 Wersjonowany system plików w Dockerze opiera się na warstwach. Warstwy są jak [commity w git'cie albo jak changesety dla systemów plików](https://docs.docker.com/engine/userguide/storagedriver/imagesandcontainers/).
