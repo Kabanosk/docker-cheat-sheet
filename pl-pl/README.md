@@ -136,3 +136,120 @@ Możesz również wypisać wynik w formacie JSON:
 $ docker version --format '{{json .}}'
 {"Client":{"Version":"1.8.0","ApiVersion":"1.20","GitCommit":"f5bae0a","GoVersion":"go1.4.2","Os":"linux","Arch":"am"}
 ```
+
+## Containers (kontenery)
+
+[Twoje podstawowe zaizolowane procesy Dockera](http://etherealmind.com/basics-docker-containers-hypervisors-coreos/). Kontenery są dla maszyn wirtualnych tym co wątki dla procesów. Możesz też o nich myśleć jako chrooty na sterydach.
+
+### Cykl życia
+* [`docker create`](https://docs.docker.com/engine/reference/commandline/create) tworzy kontener, ale go nie startuje.
+* [`docker rename`](https://docs.docker.com/engine/reference/commandline/rename/) pozwala na zmianę nazwy kontenera.
+* [`docker run`](https://docs.docker.com/engine/reference/commandline/run) tworzy i startuje kontener w jednej operacji.
+* [`docker rm`](https://docs.docker.com/engine/reference/commandline/rm) usuwa kontener.
+* [`docker update`](https://docs.docker.com/engine/reference/commandline/update/) aktualizuje limity zasobów w kontenerze.
+
+Standardowo, gdy uruchamiamy kontener bez żadnych opcji, wystartuje i zatrzyma się chwilę później, chyba że użyjesz komendy `docker run -td container_id`. Komenda ta używa flagi `-t`, która alokuje sesję pseudo-TTY oraz flagi `-d`, która pozwala na uruchomienie kontenera w trybie "detach", czyli uruchomi go w tle i wypisze id kontenera.
+
+Jeśli chciałbyś stworzyć kontener tymczasowy, użyj komendy `docker run --rm`, która usunie kontener zaraz po jego zatrzymaniu.
+
+Jeśli chciałbyś, żeby jakiś folder z twojego komputera był dostępny również w kontenerze, możesz to zrobić używając komendy `docker run -v $HOSTDIR:$DOCKERDIR`. Jeśli chcesz, dowiedzieć się o tym więcej zobacz rozdział [Volumes](https://github.com/wsargent/docker-cheat-sheet/#volumes).
+
+Jeśli chcesz, żeby poza kontenerem usunął się również volume, który mu przeznaczyłeś, musisz do komendy usuwania, dodać flagę `-v` - `docker rm -v`.
+
+Możesz również używać [sterownika do logowania](https://docs.docker.com/engine/admin/logging/overview/) do każdego kontenera od wersji dockera 1.10. Żeby skonfigurować niestandardowy sterownik do logów (np. syslog), użyj komendy `docker run --log-driver=syslog`.
+
+Kolejną pożyteczną opcją jest `docker run --name twoja_nazwa docker_image`, ponieważ jeśli ustawisz flagę `--name` w komendzie `docker run` pozwoli Ci to na uruchamianie i zatrzymywanie kontenera po wpisanej nazwie, a nie po jego ID.
+
+### Uruchamianie i zatrzymywanie 
+
+* [`docker start`](https://docs.docker.com/engine/reference/commandline/start) uruchom kontener.
+* [`docker stop`](https://docs.docker.com/engine/reference/commandline/stop) zatrzymaj kontener.
+* [`docker restart`](https://docs.docker.com/engine/reference/commandline/restart) zatrzymaj i uruchom kontener.
+* [`docker pause`](https://docs.docker.com/engine/reference/commandline/pause/) zapauzuj uruchomiony kontener, "zamraża" go w miejscu.
+* [`docker unpause`](https://docs.docker.com/engine/reference/commandline/unpause/) odpauzuj kontener.
+* [`docker wait`](https://docs.docker.com/engine/reference/commandline/wait) zablokuj dopóki uruchomiony kontener się nie zastopuje.
+* [`docker kill`](https://docs.docker.com/engine/reference/commandline/kill) wyślij sygnał SIGKILL do uruchomionego kontenera.
+* [`docker attach`](https://docs.docker.com/engine/reference/commandline/attach) połącz się z uruchomionym kontenerem.
+
+Jeśli chcesz pozostawić kontener w trybie "detach" to będąc w nim użyj `Ctrl+p, Ctrl+q`.
+Jeśli chcesz zintegrować kontener z [host process managerem](https://docs.docker.com/engine/admin/host_integration/), wystartuj daemon z flagą `-r=false`, a później użyj `docker start -a`.
+
+Jeśli chcesz wystawić porty kontenera poprzez hosta, zobacz sekcję [exposing ports](#exposing-ports).
+
+Zasady ponownego uruchamiania w przypadku uszkodzonych instancji dockera są [omówione tutaj](http://container42.com/2014/09/30/docker-restart-policies/).
+
+#### Ograniczanie CPU 
+
+Możesz ograniczyć liczbę przekazanych rdzeni CPU do kontenera, używając procentu wszystkich rdzeni lub wpisując wybrane rdzenie.
+
+Dla przykładu możesz przekazać flagę [`cpu-shares`](https://docs.docker.com/engine/reference/run/#/cpu-share-constraint). Ta flaga może być trochę dziwna -- 1024 oznacza 100% możliwych rdzeni w procesorze, więc gdy chcesz żeby kontener miał tylko 50% wszystkich to powinieneś mu dać wartość 512. Zobacz <https://goldmann.pl/blog/2014/09/11/resource-management-in-docker/#_cpu> po więcej informacji
+
+```sh
+docker run -it -c 512 agileek/cpuset-test
+```
+
+Poza tym możesz wybrać których rdzeni chcesz używać używając flagi [`cpuset-cpus`](https://docs.docker.com/engine/reference/run/#/cpuset-constraint). Zobacz <https://agileek.github.io/docker/2014/08/06/docker-cpuset/>, żeby zobaczyć szczegóły oraz fajne filmy:
+
+```sh
+docker run -it --cpuset-cpus=0,4,6 agileek/cpuset-test
+```
+
+Uwaga: Docker dalej będzie widział **wszystkie** twoje rdzenie w kontenerze -- po prostu nie będzie ich używał. Zobacz <https://github.com/docker/docker/issues/20770> po więcej szczegółów.
+
+#### Ograniczenia pamięci 
+
+W Dockerze możesz również tworzyć [ograniczenia pamięci](https://docs.docker.com/engine/reference/run/#/user-memory-constraints):
+
+```sh
+docker run -it -m 300M ubuntu:14.04 /bin/bash
+```
+
+#### Możliwości
+
+Możliwości systemu Linux można dodawać za pomocą flag `cap-add` oraz `cap-drop`. Zobacz <https://docs.docker.com/engine/reference/run/#/runtime-privilege-and-linux-capabilities> po więcej informacji. Powinieneś tego używać, w celu zwiększenia bezpieczeństwa.
+
+Żeby zamontować system plików bazowany na FUSE, musisz użyć zarówno flag `--cap-add`, jak i `--device`:
+
+```sh
+docker run --rm -it --cap-add SYS_ADMIN --device /dev/fuse sshfs
+```
+
+Przyznaj dostęp do pojedyńczego urządzenia:
+
+```sh
+docker run -it --device=/dev/ttyUSB0 debian bash
+```
+
+Przyznaj dostęp do wszystkich urządzeń:
+
+```sh
+docker run -it --privileged -v /dev/bus/usb:/dev/bus/usb debian bash
+```
+
+Więcej informacji na temat uprzywilejowanych kontenerów możesz znaleźć [tutaj](https://docs.docker.com/engine/reference/run/#runtime-privilege-and-linux-capabilities).
+
+### Info na temat kontenerów
+
+* [`docker ps`](https://docs.docker.com/engine/reference/commandline/ps) wypisuje działające kontenery.
+* [`docker logs`](https://docs.docker.com/engine/reference/commandline/logs) pobiera logi z kontenera.  (Możesz używać własnego starownika logów, ale ta komenda jest jedynie dostępna dla `json-file` i `journald` w wersji 1.10).
+* [`docker inspect`](https://docs.docker.com/engine/reference/commandline/inspect) wypisuje wszystkie informacje o kontenerze (włączając aresy IP).
+* [`docker events`](https://docs.docker.com/engine/reference/commandline/events) pobiera zdarzenia z kontenera w czasie rzeczywistym.
+* [`docker port`](https://docs.docker.com/engine/reference/commandline/port) wypisuje publiczny port kontenera.
+* [`docker top`](https://docs.docker.com/engine/reference/commandline/top) wypisuje aktualnie działający proces w kontenerze.
+* [`docker stats`](https://docs.docker.com/engine/reference/commandline/stats) pokazuje statystyki zużycia zasobów poprzez działające kontenery.
+* [`docker diff`](https://docs.docker.com/engine/reference/commandline/diff) wypisuje zmienione pliki w systemie plików kontenera.
+
+`docker ps -a` wypisuje wszystkie kontenery (te zastopowane też).
+
+`docker stats --all` wypisuje listę wszystkich kontenerów.
+
+### Importowanie / Eksportowanie
+
+* [`docker cp`](https://docs.docker.com/engine/reference/commandline/cp) kopiuje pliki lub foldery między kontenerem a lokalnym systemem plików.
+* [`docker export`](https://docs.docker.com/engine/reference/commandline/export) tworzy w STDOUT plik archiwizujący typu `.tar` z system plików kontenera.
+
+### Wywoływanie komend
+
+* [`docker exec`](https://docs.docker.com/engine/reference/commandline/exec) żeby wywołać komendę w kontenerze.
+
+Żeby wejść do działającego kontenera, dołącz nowy proces powłoki do działającego kontenera nazwanego foo, użyj: `docker exec -it foo /bin/bash`
